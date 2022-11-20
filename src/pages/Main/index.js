@@ -1,59 +1,113 @@
 import React from 'react';
-
+import {Animated} from 'react-native';
 import {
-  Text, Image, StyleSheet, Dimensions, ImageBackground, StatusBar,
-} from 'react-native';
+  GestureHandlerRootView,
+  PanGestureHandler,
+  State,
+} from 'react-native-gesture-handler';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
-const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-  fileName: {
-    fontWeight: 'bold',
-    marginTop: 5,
-  },
-  instructions: {
-    color: '#DDD',
-    fontSize: 14,
-    marginTop: 20,
-    textAlign: 'center',
-  },
-  logo: {
-    height: Dimensions.get('window').height * 0.11,
-    marginVertical: Dimensions.get('window').height * 0.11,
-    width: Dimensions.get('window').height * 0.11 * (1950 / 662),
-  },
-  welcome: {
-    color: '#fff',
-    fontSize: 22,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-});
+import Tabs from '~/components/Tabs';
+import Header from '~/components/Header';
+import {
+  Container,
+  Content,
+  Card,
+  CardHeader,
+  CardContent,
+  Title,
+  Description,
+  CardFooter,
+  Annotation,
+} from './styles';
+import Menu from '~/components/Menu';
 
-const Main = () => (
-  <ImageBackground
-    source={{
-      uri: 'https://s3-sa-east-1.amazonaws.com/rocketseat-cdn/background.png',
-    }}
-    style={styles.container}
-    resizeMode="cover"
-  >
-    <StatusBar barStyle="light-content" backgroundColor="#7159c1" />
-    <Image
-      source={{
-        uri: 'https://s3-sa-east-1.amazonaws.com/rocketseat-cdn/rocketseat_logo.png',
-      }}
-      style={styles.logo}
-      resizeMode="contain"
-    />
-    <Text style={styles.welcome}>Bem-vindo ao Template Básico!</Text>
-    <Text style={styles.instructions}>Essa é a tela principal da sua aplicação =)</Text>
-    <Text style={styles.instructions}>Você pode editar a tela no arquivo:</Text>
-    <Text style={[styles.instructions, styles.fileName]}>src/pages/Main/index.js</Text>
-  </ImageBackground>
-);
+export default function Main() {
+  let offset = 0;
+  const translateY = new Animated.Value(0);
 
-export default Main;
+  const animatedEvent = Animated.event(
+    [
+      {
+        nativeEvent: {
+          translationY: translateY,
+        },
+      },
+    ],
+    {useNativeDriver: true},
+  );
+
+  function onHandlerStateChanged(event) {
+    if (event.nativeEvent.oldState === State.ACTIVE) {
+      const {translationY} = event.nativeEvent;
+      let opened = false;
+
+      offset += translationY;
+
+      if (translationY >= 100) {
+        opened = true;
+      } else {
+        translateY.setValue(offset);
+        translateY.setOffset(0);
+        offset = 0;
+      }
+
+      Animated.timing(translateY, {
+        toValue: opened ? 380 : 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start(() => {
+        offset = opened ? 380 : 0;
+        translateY.setOffset(offset);
+        translateY.setValue(0);
+      });
+    }
+  }
+
+  return (
+    <Container>
+      <Header />
+
+      <Content>
+        <Menu translateY={translateY} />
+
+        <PanGestureHandler
+          onGestureEvent={animatedEvent}
+          onHandlerStateChange={onHandlerStateChanged}
+          // activeOffsetY={[0, 0]}
+        >
+          <Card
+            style={{
+              transform: [
+                {
+                  translateY: translateY.interpolate({
+                    inputRange: [-350, 0, 380],
+                    outputRange: [-50, 0, 380],
+                    extrapolate: 'clamp',
+                  }),
+                },
+              ],
+            }}>
+            <CardHeader>
+              <Icon name="attach-money" size={28} color="#666" />
+              <Icon name="visibility-off" size={28} color="#666" />
+            </CardHeader>
+
+            <CardContent>
+              <Title>Saldo disponível</Title>
+              <Description>R$ 199.299,10</Description>
+            </CardContent>
+
+            <CardFooter>
+              <Annotation>
+                Transferência de R$ 2.100,00 recebida de AMW hoje às 18h55.
+              </Annotation>
+            </CardFooter>
+          </Card>
+        </PanGestureHandler>
+      </Content>
+
+      <Tabs translateY={translateY} />
+    </Container>
+  );
+}
